@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jamrok Tabla Practice Forum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better readability and aesthetics */
+        :root {
+            --primary-color: #A0522D; /* Sienna brown for a traditional feel */
+            --secondary-color: #4B5563; /* Gray */
+            --text-color: #374151; /* Dark gray for main text */
+            --light-bg: #F9FAFB;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1400px; /* Increased width to utilize screen space better */
+        }
+
+        /* Large display text for Bols */
+        #bols-display {
+            font-family: monospace; /* Monospace for clear separation of bols */
+            white-space: pre-wrap; /* Crucial for displaying line breaks from TSV */
+            line-height: 1.5;
+            transition: font-size 0.2s;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .btn-score, .btn-nav {
+            transition: all 0.1s ease-in-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .btn-score:hover, .btn-nav:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 4, 6, 0.1);
+        }
+        .btn-score:active, .btn-nav:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        
+        .guru-slot {
+            background-color: #f3f4f6;
+            border-color: var(--primary-color);
+            border-style: dashed;
+            background-size: cover; /* Ensure image covers the slot */
+            background-position: center; /* Center the image */
+        }
+
+        /* Responsive font scaling for Bols */
+        @media (max-width: 768px) {
+            #bols-display {
+                font-size: 1.25rem !important; /* Larger on mobile for easier reading */
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="container mx-auto bg-white rounded-xl shadow-2xl overflow-hidden p-6 md:p-10">
+
+        <header class="flex flex-col lg:flex-row justify-between items-start mb-4 border-b pb-3 gap-4">
+            <div class="flex-shrink-0">
+                <h1 class="text-3xl font-extrabold text-gray-800">Jamrok Tabla Practice Forum</h1>
+                </div>
+
+            <div class="flex flex-col items-center p-3 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                <h2 class="text-lg font-semibold mb-2 text-gray-700">Guru Darshan</h2>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <div id="guru-slot-1" data-default="Guru 1" class="guru-slot w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-500 overflow-hidden">Guru 1</div>
+                    <div id="guru-slot-2" data-default="Guru 2" class="guru-slot w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-500 overflow-hidden">Guru 2</div>
+                    <div id="guru-slot-3" data-default="Guru 3" class="guru-slot w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-500 overflow-hidden">Guru 3</div>
+                </div>
+                <div class="mt-2 text-center">
+                    <label for="guru-upload" class="cursor-pointer bg-primary-color text-gray-900 px-3 py-1 rounded-full text-xs hover:bg-primary-color/90 transition">
+                        Upload Photos
+                    </label>
+                    <input type="file" id="guru-upload" multiple accept="image/*" class="hidden" onchange="handleGuruUpload(event)">
+                </div>
+            </div>
+        </header>
+
+        <section class="mb-6 p-3 bg-gray-100 rounded-lg shadow-md flex flex-col md:flex-row flex-wrap items-center gap-4">
+            
+            <p class="text-xl font-medium text-gray-600 w-full mb-2" id="composition-type-display">Loading...</p>
+
+            <div class="flex-grow flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+                <label for="comp-select" class="font-semibold text-gray-700 whitespace-nowrap">Select Composition:</label>
+                <select id="comp-select" onchange="jumpToComposition(this.value)" class="flex-grow min-w-48 p-2 border border-gray-300 rounded-lg text-gray-800">
+                    <option value="" disabled selected>Load data first</option>
+                </select>
+            </div>
+
+            <div class="flex space-x-2">
+                <button onclick="loadPreviousComposition()" class="btn-nav bg-gray-300 text-gray-800 p-2 rounded-lg font-medium hover:bg-gray-400">Previous</button>
+                <button onclick="loadNextComposition()" class="btn-nav bg-gray-300 text-gray-800 p-2 rounded-lg font-medium hover:bg-gray-400">Next</button>
+            </div>
+            
+            <div class="flex space-x-2 ml-auto">
+                <button onclick="startSoloMode()" id="start-solo-btn" class="btn-nav bg-red-500 text-white p-2 rounded-lg font-bold hover:bg-red-600">
+                    Start Solo Mode
+                </button>
+                <button onclick="exitSoloMode()" id="exit-solo-btn" class="btn-nav bg-gray-500 text-white p-2 rounded-lg font-bold hover:bg-gray-600 hidden">
+                    Exit Solo Mode
+                </button>
+            </div>
+
+
+            <div class="flex flex-wrap gap-4 mt-2 md:mt-0">
+
+                <div class="flex items-center space-x-2">
+                    <label for="taal-filter" class="text-sm font-medium text-gray-700">Taal:</label>
+                    <select id="taal-filter" onchange="applyFilters()" class="p-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="">All Taals</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <label for="comptype-filter" class="text-sm font-medium text-gray-700">Comp Type:</label>
+                    <select id="comptype-filter" onchange="applyFilters()" class="p-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <label for="bpm-filter" class="text-sm font-medium text-gray-700">Min BPM:</label>
+                    <select id="bpm-filter" onchange="applyFilters()" class="p-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="0">All BPMs (Min 0)</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <label for="gharana-filter" class="text-sm font-medium text-gray-700">Gharana:</label>
+                    <select id="gharana-filter" onchange="applyFilters()" class="p-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="">All Gharanas</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="composer-filter" class="text-sm font-medium text-gray-700">Composer:</label>
+                    <select id="composer-filter" onchange="applyFilters()" class="p-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="">All Composers</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <label for="level-filter" class="text-sm font-medium text-gray-700">Lesson #:</label>
+                    <select id="level-filter" onchange="applyFilters()" class="p-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="">All Lessons</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+            <div class="text-lg">
+                <span class="font-semibold text-gray-700">Taal:</span> <span id="taal-display" class="font-bold text-lg text-primary-color">...</span>
+            </div>
+            <div class="text-lg">
+                <span class="font-semibold text-gray-700">Beats (#):</span> <span id="beats-display" class="font-bold text-lg text-primary-color">...</span>
+            </div>
+            <div class="text-lg">
+                <span class="font-semibold text-gray-700">Low BPM:</span> <span id="bpm-display" class="font-bold text-lg text-primary-color">...</span>
+            </div>
+        </div>
+
+        <section class="mb-4 p-4 bg-gray-100 rounded-lg shadow-inner">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Composition Bols (Ref)</h2>
+            <div id="bols-display" class="text-2xl sm:text-3xl font-mono text-gray-900 break-words">
+                Please upload a .tsv file with 'Ref bols' column to load a composition.
+            </div>
+            <div class="flex items-center space-x-3 mt-4">
+                <label for="font-size-slider" class="text-sm font-medium text-gray-600">Bols Font Size:</label>
+                <input type="range" id="font-size-slider" min="16" max="40" value="32" class="w-full md:w-1/3 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+            </div>
+        </section>
+
+        <footer class="mt-4 mb-6 pt-3 border-t border-gray-200 text-base text-gray-500 grid grid-cols-2 md:grid-cols-3 gap-y-2 p-3 bg-white rounded-lg shadow-sm">
+            <div><span class="font-semibold text-gray-700">Lesson #:</span> <span id="level-display">...</span></div> <div><span class="font-semibold text-gray-700">Memory Aid:</span> <span id="memory-aid-display">...</span></div>
+            <div><span class="font-semibold text-gray-700">Composer:</span> <span id="composer-display">...</span></div>
+            <div><span class="font-semibold text-gray-700">RJ #:</span> <span id="rj-display">...</span></div>
+            <div><span class="font-semibold text-gray-700">Gharana:</span> <span id="gharana-display">...</span></div>
+            <div class="col-span-2 md:col-span-3"><span class="font-semibold text-gray-700">Notes:</span> <span id="notes-display">...</span></div>
+        </footer>
+
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="p-6 bg-blue-500 text-white rounded-xl shadow-lg flex flex-col justify-center items-center">
+                <h3 class="text-xl font-medium mb-2">Total Practice Score</h3>
+                <p id="score-display" class="text-6xl font-extrabold">0</p>
+                <button onclick="resetScore()" class="mt-4 px-3 py-1 bg-white text-blue-700 font-semibold rounded-full text-sm hover:bg-gray-100 transition">Reset Score</button>
+            </div>
+
+            <div class="p-6 bg-indigo-500 text-white rounded-xl shadow-lg flex flex-col justify-center items-center">
+                <h3 class="text-xl font-medium mb-2">Practice Timer</h3>
+                <p id="timer-display" class="text-6xl font-extrabold">05:00</p>
+                <div class="flex space-x-3 mt-4">
+                    <button onclick="startTimer()" id="start-btn" class="px-4 py-2 bg-white text-indigo-700 font-bold rounded-full hover:bg-gray-100 transition">Start</button>
+                    <button onclick="resetTimer()" id="reset-btn" class="px-4 py-2 bg-indigo-700 text-white font-bold rounded-full hover:bg-indigo-800 transition">Reset</button>
+                    <select id="timer-select" class="px-4 py-2 bg-white text-indigo-700 font-bold rounded-full">
+                        <option value="1">1 min</option>
+                        <option value="5" selected>5 min</option>
+                        <option value="10">10 min</option>
+                        <option value="30">30 min</option>
+                        <option value="60">60 min</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-1 flex flex-col space-y-4">
+                <button onclick="addScoreAndAdvance(5)" class="btn-score bg-emerald-500 text-white py-4 px-6 rounded-xl text-xl font-bold uppercase tracking-wider hover:bg-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-300">
+                    Correct 1st Time (+5 pts)
+                </button>
+                <button onclick="addScoreAndAdvance(1)" class="btn-score bg-gray-500 text-white py-4 px-6 rounded-xl text-xl font-bold uppercase tracking-wider hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-300">
+                    Completed (+1 pt)
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <div class="fixed bottom-4 right-4 z-10">
+        <label for="data-upload" class="cursor-pointer bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg hover:bg-gray-700 transition flex items-center space-x-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            <span>Load Compositions</span>
+        </label>
+        <input type="file" id="data-upload" accept=".tsv,.txt" class="hidden" onchange="handleFileUpload(event)">
+    </div>
+
+    <script>
+        // Global variables
+        let allCompositions = []; // Stores all compositions loaded from the file
+        let displayedCompositions = []; // Stores the current set after filtering
+        let currentCompositionIndex = 0;
+        let totalScore = 0;
+        let timerInterval;
+        let timeRemaining = 300; // Default 5 minutes (300 seconds)
+        let audioContext;
+
+        // --- Audio Functions (Self-contained soothing tone) ---
+
+        /**
+         * Plays a short, high-pitched G# sine wave tone 5 times.
+         */
+        function playSoothingTone() {
+            if (!audioContext) {
+                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Resume context if suspended (important for browser security/UX)
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            // G#5 frequency
+            const frequency = 830.61; 
+            const noteDuration = 0.2; // Duration of each tone segment in seconds
+            const totalDuration = 0.4; // Time span of one note cycle (0.2s tone + 0.2s pause)
+            const repeatCount = 5;
+            const maxVolume = 0.25;
+            
+            // Schedule all 5 notes precisely
+            for (let i = 0; i < repeatCount; i++) {
+                const now = audioContext.currentTime;
+                const startTime = now + (i * totalDuration);
+                const stopTime = startTime + noteDuration;
+
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.setValueAtTime(frequency, startTime);
+                oscillator.type = 'sine'; 
+
+                // Envelope: Quick attack, hold, quick release
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(maxVolume, startTime + 0.01); 
+                gainNode.gain.linearRampToValueAtTime(maxVolume, stopTime - 0.05); // Hold volume
+                gainNode.gain.linearRampToValueAtTime(0.0001, stopTime); // Quick decay to zero
+
+                oscillator.start(startTime);
+                oscillator.stop(stopTime + 0.01); // Stop slightly after fade out
+            }
+        }
+
+        // --- Utility Functions ---
+        
+        /**
+         * Provides a temporary message to the user, replacing the bols display content.
+         */
+        function alertUser(message) {
+            const originalContent = document.getElementById('bols-display').textContent;
+            
+            // Temporarily display the message
+            document.getElementById('bols-display').textContent = message;
+            
+            // Restore original content after a delay if not empty
+            if (originalContent && !originalContent.includes('Please upload')) {
+                setTimeout(() => {
+                    // Only restore if we are not currently in solo mode showing a temporary message
+                    if (document.getElementById('bols-display').textContent === message) {
+                       renderComposition(displayedCompositions[currentCompositionIndex]);
+                    }
+                }, 3000); // Display message for 3 seconds
+            }
+            console.warn(message);
+        }
+
+        /**
+         * Parses TSV content into an array of objects.
+         * Assumes the first row is the header.
+         * Standardizes header keys.
+         * @param {string} tsvText - The raw TSV data as a string.
+         * @returns {Array<Object>} - Array of composition objects.
+         */
+        function parseTSV(tsvText) {
+            // Split by line (handling both CR/LF) and then split by tab
+            const rows = tsvText.trim().split(/\r?\n/).map(row => row.split('\t'));
+            if (rows.length < 2) return [];
+
+            const headers = rows[0].map(h => h.trim());
+            const data = rows.slice(1).map(row => {
+                let obj = {};
+                headers.forEach((header, index) => {
+                    let key = header.replace(/[^a-zA-Z0-9]/g, ''); 
+                    
+                    // Standardize common keys for consistency
+                    if (key.includes('beats')) key = 'TaalBeats'; 
+                    if (key.includes('CompType')) key = 'Comptype';
+                    if (key.includes('RJ')) key = 'RJ';
+                    if (key.includes('LowBPM')) key = 'LowBPM';
+                    if (key.includes('Refbols')) key = 'Refbols';
+                    if (key.includes('Taalname')) key = 'Taalname';
+                    if (key.includes('Composer')) key = 'Composer';
+                    if (key.includes('Gharana')) key = 'Gharana';
+                    if (key.includes('Level')) key = 'Level';
+                    if (key.includes('Memoryaid')) key = 'Memoryaid';
+                    if (key.includes('notes')) key = 'notes';
+                    
+                    // Note: row[index] contains the raw cell data, including internal \n if present.
+                    // .trim() only removes leading/trailing whitespace, preserving internal structure.
+                    obj[key] = row[index] ? row[index].trim() : ''; 
+                });
+                return obj;
+            }).filter(obj => obj.Refbols); // Only keep entries with bols
+
+            console.log("Parsed Data:", data);
+            return data;
+        }
+
+        /**
+         * Populates the Composer, Gharana, CompType, Taal, BPM, and Level filter dropdowns.
+         */
+        function populateFilters(data) {
+            const composers = [...new Set(data.map(c => c.Composer).filter(Boolean))].sort();
+            const gharanas = [...new Set(data.map(c => c.Gharana).filter(Boolean))].sort();
+            const compTypes = [...new Set(data.map(c => c.Comptype).filter(Boolean))].sort();
+            const taals = [...new Set(data.map(c => c.Taalname).filter(Boolean))].sort();
+            const levels = [...new Set(data.map(c => c.Level).filter(Boolean))].sort((a, b) => { // *** NEW: Get unique Levels and sort numerically if possible ***
+                const numA = parseInt(a);
+                const numB = parseInt(b);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return numA - numB;
+                }
+                return a.localeCompare(b);
+            });
+            // Collect unique BPM values, sort them numerically
+            const bpms = [...new Set(data.map(c => c.LowBPM).filter(Boolean).map(Number))].sort((a, b) => a - b);
+
+
+            const composerFilter = document.getElementById('composer-filter');
+            const gharanaFilter = document.getElementById('gharana-filter');
+            const compTypeFilter = document.getElementById('comptype-filter'); 
+            const bpmFilter = document.getElementById('bpm-filter');
+            const taalFilter = document.getElementById('taal-filter');
+            const levelFilter = document.getElementById('level-filter'); // *** NEW: Level filter element ***
+
+
+            // Clear and repopulate Composer filter
+            // Note: Preserve selected value if it exists in the new dataset
+            const selectedComposer = composerFilter.value;
+            composerFilter.innerHTML = '<option value="">All Composers</option>';
+            composers.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c;
+                option.textContent = c;
+                if (c === selectedComposer) option.selected = true;
+                composerFilter.appendChild(option);
+            });
+
+            // Clear and repopulate Gharana filter
+            const selectedGharana = gharanaFilter.value;
+            gharanaFilter.innerHTML = '<option value="">All Gharanas</option>';
+            gharanas.forEach(g => {
+                const option = document.createElement('option');
+                option.value = g;
+                option.textContent = g;
+                if (g === selectedGharana) option.selected = true;
+                gharanaFilter.appendChild(option);
+            });
+            
+            // Clear and repopulate Taal filter
+            const selectedTaal = taalFilter.value;
+            taalFilter.innerHTML = '<option value="">All Taals</option>';
+            taals.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t;
+                option.textContent = t;
+                if (t === selectedTaal) option.selected = true;
+                taalFilter.appendChild(option);
+            });
+
+            // Clear and repopulate Comp Type filter
+            const selectedCompType = compTypeFilter.value;
+            compTypeFilter.innerHTML = '<option value="">All Types</option>';
+            compTypes.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t;
+                option.textContent = t;
+                if (t === selectedCompType) option.selected = true;
+                compTypeFilter.appendChild(option);
+            });
+
+            // *** NEW: Clear and repopulate Lesson # (Level) filter ***
+            const selectedLevel = levelFilter.value;
+            levelFilter.innerHTML = '<option value="">All Lessons</option>';
+            levels.forEach(l => {
+                const option = document.createElement('option');
+                option.value = l;
+                option.textContent = `Lesson ${l}`;
+                if (l === selectedLevel) option.selected = true;
+                levelFilter.appendChild(option);
+            });
+
+
+            // Clear and repopulate BPM filter
+            const selectedBPM = bpmFilter.value;
+            bpmFilter.innerHTML = '<option value="0">All BPMs (Min 0)</option>';
+            bpms.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b;
+                option.textContent = `Min ${b}`;
+                if (b.toString() === selectedBPM) option.selected = true;
+                bpmFilter.appendChild(option);
+            });
+        }
+
+        /**
+         * Populates the main composition selection dropdown with RJ# and first line of bols.
+         */
+        function populateCompositionSelect(data) {
+            const select = document.getElementById('comp-select');
+            select.innerHTML = ''; // Clear existing options
+            
+            if (data.length === 0) {
+                select.innerHTML = '<option value="" disabled selected>No compositions match filter</option>';
+                return;
+            }
+
+            data.forEach((comp, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                
+                // Get the first line of bols for display
+                const firstLineBols = comp.Refbols ? comp.Refbols.split('\n')[0].substring(0, 40).trim() : 'No Bols';
+                
+                // Display format: RJ # | First Line of Bols
+                option.textContent = `${comp.RJ || 'No RJ'} | ${firstLineBols}...`; 
+                select.appendChild(option);
+            });
+
+            // Set the dropdown to the current composition
+            select.value = currentCompositionIndex;
+        }
+
+
+        // --- Data & Display Functions ---
+
+        /**
+         * Renders the current composition data to the display.
+         */
+        function renderComposition(comp) {
+            if (!comp) {
+                document.getElementById('bols-display').textContent = 'No compositions loaded or selected.';
+                // Clear other displays
+                document.querySelectorAll('#taal-display, #beats-display, #bpm-display, #composition-type-display, #level-display, #memory-aid-display, #composer-display, #rj-display, #notes-display, #gharana-display').forEach(el => el.textContent = 'N/A');
+                return;
+            }
+            
+            document.getElementById('taal-display').textContent = comp.Taalname || 'N/A';
+            // Uses the standardized key 'TaalBeats'
+            document.getElementById('beats-display').textContent = comp.TaalBeats || 'N/A';
+            document.getElementById('bpm-display').textContent = comp.LowBPM || 'N/A';
+            document.getElementById('composition-type-display').textContent = comp.Comptype || 'N/A';
+            document.getElementById('bols-display').textContent = comp.Refbols || 'N/A';
+
+            // Footer Info
+            document.getElementById('level-display').textContent = comp.Level || 'N/A';
+            document.getElementById('memory-aid-display').textContent = comp.Memoryaid || 'N/A';
+            document.getElementById('composer-display').textContent = comp.Composer || 'N/A';
+            document.getElementById('rj-display').textContent = comp.RJ || 'N/A';
+            document.getElementById('notes-display').textContent = comp.notes || 'N/A';
+            document.getElementById('gharana-display').textContent = comp.Gharana || 'N/A';
+            
+            // Update the dropdown selection to match the currently displayed composition
+            document.getElementById('comp-select').value = currentCompositionIndex;
+        }
+
+        /**
+         * Loads the next composition in the currently displayed array, looping back to the start.
+         */
+        function loadNextComposition() {
+            if (displayedCompositions.length === 0) return;
+
+            currentCompositionIndex = (currentCompositionIndex + 1) % displayedCompositions.length;
+            renderComposition(displayedCompositions[currentCompositionIndex]);
+        }
+
+        /**
+         * Loads the previous composition in the currently displayed array, looping to the end.
+         */
+        function loadPreviousComposition() {
+            if (displayedCompositions.length === 0) return;
+
+            currentCompositionIndex = (currentCompositionIndex - 1 + displayedCompositions.length) % displayedCompositions.length;
+            renderComposition(displayedCompositions[currentCompositionIndex]);
+        }
+
+        /**
+         * Jumps to a composition selected via the dropdown.
+         */
+        function jumpToComposition(index) {
+            const newIndex = parseInt(index);
+            if (!isNaN(newIndex) && newIndex >= 0 && newIndex < displayedCompositions.length) {
+                currentCompositionIndex = newIndex;
+                renderComposition(displayedCompositions[currentCompositionIndex]);
+            }
+        }
+
+        /**
+         * Applies the currently selected filters and updates the displayed compositions list.
+         */
+        function applyFilters() {
+            const composerFilter = document.getElementById('composer-filter').value;
+            const gharanaFilter = document.getElementById('gharana-filter').value;
+            const taalFilter = document.getElementById('taal-filter').value; 
+            const compTypeFilter = document.getElementById('comptype-filter').value; 
+            const minBPM = parseFloat(document.getElementById('bpm-filter').value); 
+            const levelFilter = document.getElementById('level-filter').value; // *** NEW: Get Level filter value ***
+
+            displayedCompositions = allCompositions.filter(comp => {
+                const matchesComposer = !composerFilter || comp.Composer === composerFilter;
+                const matchesGharana = !gharanaFilter || comp.Gharana === gharanaFilter;
+                const matchesTaal = !taalFilter || comp.Taalname === taalFilter; 
+                const matchesCompType = !compTypeFilter || comp.Comptype === compTypeFilter; 
+                const matchesLevel = !levelFilter || comp.Level === levelFilter; // *** NEW: Level filter logic ***
+                
+                // BPM Filtering Logic: Filter for compositions where LowBPM is >= the selected minBPM
+                const compBPM = parseFloat(comp.LowBPM);
+                const matchesBPM = isNaN(minBPM) || compBPM >= minBPM;
+
+                return matchesComposer && matchesGharana && matchesTaal && matchesCompType && matchesBPM && matchesLevel; // *** UPDATED: Include Level filter ***
+            });
+
+            // Reset index and update UI
+            currentCompositionIndex = 0;
+            populateCompositionSelect(displayedCompositions);
+            renderComposition(displayedCompositions[currentCompositionIndex]);
+            
+            // Ensure Solo Mode buttons are set to default state (Start visible, Exit hidden)
+            document.getElementById('start-solo-btn').classList.remove('hidden');
+            document.getElementById('exit-solo-btn').classList.add('hidden');
+        }
+
+
+        // --- Solo Mode Logic ---
+
+      
+/**
+ * Selects compositions for a structured "Solo Mode" based on new user rules:
+ * 1. Fixed sequence (15 total): Uthan(1), Peshkar(1), Kayeda(3), Gat(3), Rela(1), Tukra(3), Chakradar(3).
+ * 2. BPM Constraint: Successive BPM must be within +/- 30 BPM of the last selection.
+ */
+function startSoloMode() {
+    if (allCompositions.length === 0) {
+        alertUser("Please load compositions first using the 'Load Compositions' button.");
+        return;
+    }
+
+    const soloModePlan = [
+        { type: ['Uthan'], count: 1, initialBPMMin: 30, initialBPMMax: 120, maxBPMDelta: 30 },
+        { type: ['Peshkar'], count: 1, maxBPMDelta: 30 },
+        { type: ['Kayeda'], count: 3, maxBPMDelta: 30 },
+        { type: ['Gat'], count: 3, maxBPMDelta: 30 },
+        { type: ['Rela'], count: 1, maxBPMDelta: 30 },
+        { type: ['Tukra'], count: 3, maxBPMDelta: 30 },
+        { type: ['Chakradar'], count: 3, maxBPMDelta: 30 }
+    ];
+
+    let soloModeList = [];
+    let lastBPM = 0; // Tracks the LowBPM of the last selected composition
+
+    // 1. Group compositions by type for easy selection, converting LowBPM to number
+    const typePools = allCompositions.reduce((acc, comp) => {
+        const type = comp.Comptype;
+        if (type) {
+            if (!acc[type]) acc[type] = [];
+            // Ensure LowBPM is treated as a number
+            comp.LowBPM = parseFloat(comp.LowBPM) || 0;
+            acc[type].push(comp);
+        }
+        return acc;
+    }, {});
+
+    // 2. Iterate through the structured plan and select compositions
+    for (const step of soloModePlan) {
+        let currentPool = [];
+        
+        // Combine pools for all specified types in the step (though usually one type here)
+        for (const typeName of step.type) {
+            currentPool.push(...(typePools[typeName] || []));
+        }
+
+        let neededCount = step.count;
+        let selectedInThisStep = [];
+        let attempts = 0;
+        const maxAttempts = currentPool.length * 2 + 10; // Avoid infinite loop
+
+        while (neededCount > 0 && attempts < maxAttempts) {
+            attempts++;
+            
+            // Filter the current pool based on the LowBPM constraint
+            let availableComps = currentPool.filter(comp => {
+                // Remove compositions already selected in this step
+                if (selectedInThisStep.includes(comp)) return false;
+                
+                let matchesBPM = false;
+                const compBPM = comp.LowBPM;
+
+                if (soloModeList.length === 0) {
+                    // Special rule for the very first composition (Uthan)
+                    matchesBPM = compBPM >= step.initialBPMMin && compBPM <= step.initialBPMMax;
+                } else {
+                    // Standard rule: BPM must be within +/- maxBPMDelta of the last BPM
+                    matchesBPM = compBPM >= (lastBPM - step.maxBPMDelta) && compBPM <= (lastBPM + step.maxBPMDelta);
+                }
+                return matchesBPM;
+            });
+            
+            if (availableComps.length === 0) {
+                console.warn(`Could not find a suitable composition for type(s) ${step.type.join('/')} with BPM constraint (last BPM: ${lastBPM}, delta: ${step.maxBPMDelta}).`);
+                // Break this step and move to the next type, even if the count isn't met
+                break; 
+            }
+
+            // Pick one random composition from the filtered list
+            const randomIndex = Math.floor(Math.random() * availableComps.length);
+            const compToSelect = availableComps[randomIndex];
+            
+            // Update tracking variables
+            selectedInThisStep.push(compToSelect);
+            soloModeList.push(compToSelect);
+            lastBPM = compToSelect.LowBPM; // Update the reference BPM
+            neededCount--;
+
+            // Remove the selected composition from the currentPool to prevent re-selection
+            currentPool = currentPool.filter(c => c !== compToSelect);
+            attempts = 0; // Reset attempts for the next composition needed
+        }
+
+        if (neededCount > 0) {
+            console.error(`Only found ${step.count - neededCount} out of ${step.count} compositions for type(s) ${step.type.join('/')}. Solo mode cannot be fully created.`);
+        }
+    }
+    
+    // Sort the final list by LowBPM primarily, though the selection process already imposes order.
+    // Re-sorting is only done here for robustness, but the loop logic *should* maintain order based on selection.
+    // We will skip a final sort to preserve the order dictated by the sequence/BPM steps.
+
+
+    // 3. Update the main display list
+    displayedCompositions = soloModeList;
+    currentCompositionIndex = 0;
+
+    if (displayedCompositions.length > 0) {
+        // Enforce the total 15 count rule (if the file has enough data)
+        if (displayedCompositions.length !== 15) {
+             alertUser(`Warning: Only found ${displayedCompositions.length} compositions instead of the required 15 for Solo Mode. Proceeding with available compositions.`);
+        }
+        
+        // Update buttons
+        document.getElementById('start-solo-btn').classList.add('hidden');
+        document.getElementById('exit-solo-btn').classList.remove('hidden');
+
+        // Update filters and selector to reflect the new list
+        populateCompositionSelect(displayedCompositions);
+        renderComposition(displayedCompositions[currentCompositionIndex]);
+        alertUser(`Solo Mode started! ${displayedCompositions.length} compositions loaded in sequence with smooth BPM transitions. Time to practice!`);
+    } else {
+        alertUser("Could not find any compositions matching the Solo Mode requirements. Please check your composition data and BPM values.");
+    }
+}
+        /**
+         * Exits the Random Solo Mode and reverts to the previously applied filters (or the full list).
+         */
+        function exitSoloMode() {
+            // Reapply existing filters (or lack thereof) to restore the full list state
+            applyFilters(); 
+            
+            // Update buttons
+            document.getElementById('start-solo-btn').classList.remove('hidden');
+            document.getElementById('exit-solo-btn').classList.add('hidden');
+            
+            alertUser("Solo Mode exited. Display restored to filtered/full list.");
+        }
+
+
+        // --- Event Handlers ---
+
+        /**
+         * Handles the TSV/TXT file upload.
+         */
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const tsvText = e.target.result;
+                allCompositions = parseTSV(tsvText);
+
+                if (allCompositions.length > 0) {
+                    // Initialize displayed list and filters
+                    displayedCompositions = [...allCompositions];
+                    populateFilters(allCompositions);
+                    
+                    // Reset index and load the first composition
+                    currentCompositionIndex = 0;
+                    populateCompositionSelect(displayedCompositions);
+                    renderComposition(displayedCompositions[currentCompositionIndex]);
+                } else {
+                    document.getElementById('bols-display').textContent = 'Failed to parse compositions or no "Refbols" found. Please check file format.';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        /**
+         * Handles the font size slider change for Bols display.
+         */
+        function handleFontSizeChange(event) {
+            const size = event.target.value;
+            document.getElementById('bols-display').style.fontSize = `${size}px`;
+        }
+
+        /**
+         * Handles Guru photo uploads (up to 3).
+         */
+        function handleGuruUpload(event) {
+            const files = Array.from(event.target.files).slice(0, 3); // Limit to 3 files
+            const slots = [
+                document.getElementById('guru-slot-1'),
+                document.getElementById('guru-slot-2'),
+                document.getElementById('guru-slot-3')
+            ];
+
+            // Clear previous images
+            slots.forEach(slot => {
+                slot.innerHTML = slot.getAttribute('data-default') || '';
+                slot.style.backgroundImage = 'none';
+                slot.classList.add('border-dashed', 'bg-gray-200'); // Restore default look
+            });
+
+            files.forEach((file, index) => {
+                if (index < 3) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        slots[index].innerHTML = ''; // Clear text
+                        slots[index].style.backgroundImage = `url('${e.target.result}')`;
+                        slots[index].setAttribute('title', `Guru Photo ${index + 1}: ${file.name}`);
+                        slots[index].classList.remove('border-dashed', 'bg-gray-200'); // Remove default look on success
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // --- Scoring Functions ---
+
+        /**
+         * Adds points to the total score and updates the display.
+         * @param {number} points - The points to add.
+         */
+        function addScore(points) {
+            totalScore += points;
+            document.getElementById('score-display').textContent = totalScore;
+            
+            // Visual feedback
+            const scoreElement = document.getElementById('score-display');
+            scoreElement.classList.add('animate-ping-once', 'text-yellow-300');
+            setTimeout(() => {
+                scoreElement.classList.remove('animate-ping-once', 'text-yellow-300');
+                scoreElement.classList.add('text-white');
+            }, 300);
+        }
+
+        /**
+         * Resets the total practice score to zero.
+         */
+        function resetScore() {
+            totalScore = 0;
+            document.getElementById('score-display').textContent = totalScore;
+            alertUser("Score has been reset to 0.");
+        }
+
+
+        /**
+         * Adds score and automatically advances to the next composition.
+         * @param {number} points - The points to add.
+         */
+        function addScoreAndAdvance(points) {
+            addScore(points);
+            loadNextComposition();
+        }
+
+        // --- Timer Functions ---
+
+        /**
+         * Formats seconds into MM:SS string.
+         * @param {number} totalSeconds - The total number of seconds.
+         * @returns {string} - Formatted time string.
+         */
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        /**
+         * Updates the timer display every second.
+         */
+        function updateTimer() {
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                document.getElementById('timer-display').textContent = "Time's Up!";
+                document.getElementById('start-btn').textContent = 'Start';
+                playSoothingTone(); // Play tone when time is up
+                return;
+            }
+            timeRemaining--;
+            document.getElementById('timer-display').textContent = formatTime(timeRemaining);
+        }
+
+        /**
+         * Starts or pauses the timer.
+         */
+        function startTimer() {
+            const startBtn = document.getElementById('start-btn');
+            if (timerInterval) {
+                // Pause
+                clearInterval(timerInterval);
+                timerInterval = null;
+                startBtn.textContent = 'Resume';
+            } else {
+                // Start
+                startBtn.textContent = 'Pause';
+                if (timeRemaining <= 0) {
+                    resetTimer(); // If time is up, reset first
+                }
+                timerInterval = setInterval(updateTimer, 1000);
+            }
+        }
+
+        /**
+         * Resets the timer to the selected duration.
+         */
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            const minutes = parseInt(document.getElementById('timer-select').value);
+            timeRemaining = minutes * 60;
+            document.getElementById('timer-display').textContent = formatTime(timeRemaining);
+            document.getElementById('start-btn').textContent = 'Start';
+        }
+
+        // --- Initialization ---
+
+        window.onload = () => {
+            // Set initial timer display
+            resetTimer();
+
+            // Set up event listeners
+            document.getElementById('font-size-slider').addEventListener('input', handleFontSizeChange);
+            document.getElementById('timer-select').addEventListener('change', resetTimer);
+            
+            // Set initial composition display state
+            renderComposition(null);
+        };
+
+        // Initialize animation for scoring feedback
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ping-once {
+                0%, 100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+                50% {
+                    transform: scale(1.1);
+                    opacity: 0.8;
+                }
+            }
+            .animate-ping-once {
+                animation: ping-once 0.3s ease-in-out;
+            }
+        `;
+        document.head.appendChild(style);
+
+    </script>
+</body>
+</html>
